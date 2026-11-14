@@ -14,6 +14,16 @@ The same application supports each participant's private configuration and the g
 
 See [the setup guide](PORTABLE_PRACTICE_README.md). Run npm ci followed by npm test. Publish the main branch root with GitHub Pages. Add the published page to the PAT project's authentication redirect allowlist before moving sign-in links.
 
+## Reward policy and help messages — 15 November 2026
+
+Apply `supabase/reward_policy.sql` after the existing foundation, hub, tablet and PIN schemas. The shared client caps ordinary practice coins at agreed weekly targets, has one completion bonus and one additional-work bonus from Sunday, and requires authenticated parent/clinician approval. The database guard protects clinician-owned targets and assignments, rejects child-account approvals, repeated sessions, invalid coin values and over-cap awards. A Family PIN is an additional interface check, not the server authentication boundary. Speech uses one complete supported story rather than a time minimum; standard unassigned practice uses at least ten observed engaged minutes. New clinician-assigned tasks use their explicit finish criteria. Routines remain separate.
+
+Run `node tests/reward-policy.test.cjs` as well as the existing cloud, install and help-handler checks. Do not test by leaving fictional activity records in a participant workspace. Legacy earned coins remain intact.
+
+Apply `supabase/help_message.sql` before deploying the updated `pat-help` function. The optional message is at most 500 characters, is bound to the request identity for retries, and is sent only to the server-configured parent. No raw dictation audio is emailed. The function validates the bearer token itself, as before. Browser dictation support varies and may use a remote browser speech service; keyboard dictation and typing remain alternatives.
+
+Story Safari is maintained separately in Therapy-Games. Its optional familiar-voice clips stay in that browser's IndexedDB, with explicit export/import; they are not automatically part of PAT cloud audio.
+
 ## Migration from Track
 
 PAT was extracted from WhizkidAl/Track-WhizKids at commit 043f82f0ad83ab982c665c4900402a68225093d9 on 14 November 2026. Track remains a separate application and repository. The old PAT address remains available for existing tablet shortcuts during migration. The database, accounts and participant records are unchanged. Check Saved to cloud before replacing a tablet shortcut.

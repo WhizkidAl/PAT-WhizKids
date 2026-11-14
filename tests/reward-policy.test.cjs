@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const html=fs.readFileSync(path.join(__dirname,'../portable-practice-app.html'),'utf8');const code=html.slice(html.indexOf('/* Shared, deterministic reward rules.'),html.indexOf('// Reward policy v3:'));const context={module:{exports:{}}};vm.runInNewContext(code,context);const R=context.module.exports;
+const k='2026-11-09',s={targets:{nessy:2,speech:1},weeks:{},entries:[]};
+const record=(id,activity,time)=>({id,sessionKey:id,activity,week:k,date:time.slice(0,10),time,started:time,status:'approved',outcome:'finished',rewardVersion:3,workConfirmed:true});
+s.entries.push(record('n1','nessy','2026-11-10T10:00:00Z'),record('n2','nessy','2026-11-11T10:00:00Z'),record('n3','nessy','2026-11-12T10:00:00Z'));assert.equal(R.coin(s,s.entries[2],'2026-11-15'),0);assert.equal(R.complete(s,k),false);assert.equal(R.extra(s,k,'2026-11-15'),false);
+s.entries.push(record('s1','speech','2026-11-13T10:00:00Z'));assert(R.complete(s,k));assert.equal(R.extra(s,k,'2026-11-15'),false);
+s.entries.push(record('n4','nessy','2026-11-14T10:00:00Z'));assert.equal(R.extra(s,k,'2026-11-14'),false);assert(R.extra(s,k,'2026-11-15'));
+s.entries.push({...record('bonus1','weekly-bonus','2026-11-15T10:00:00Z'),bonusWeek:k,bonusType:'completion'},{...record('bonus2','extra-bonus','2026-11-15T11:00:00Z'),bonusWeek:k,bonusType:'extra'});assert.equal(s.entries.reduce((n,e)=>n+R.coin(s,e,'2026-11-15'),0),5);
+s.entries.push({...s.entries[0],id:'same-session'});assert.equal(R.coin(s,s.entries.at(-1),'2026-11-15'),0);assert.equal(R.complete(s,'2026-11-16'),false);
+s.targets.ot=1;s.adjustments=[{week:k,activity:'ot',delta:99}];assert.equal(R.complete(s,k),false);
+assert(html.includes("e.activity!=='speech'"));assert(html.includes('one complete story: understand the situation'));
+console.log('PASS actual embedded reward policy: caps, duplicate sessions, both bonuses, extra-after-completion, Sunday gate, rollover, missing tasks and Speech finish point');

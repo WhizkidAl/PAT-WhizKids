@@ -37,7 +37,8 @@ begin
   if e->>'rewardVersion'='3' and (coalesce(e->>'coins','0') not in ('0','1') or (e->>'status'<>'approved' and coalesce(e->>'coins','0')<>'0')) then raise exception 'Invalid coin award'; end if;
   if e is not distinct from prior then continue; end if;
   if prior is not null and role_name='tablet' and prior->>'status'='approved' and e is distinct from prior then raise exception 'A parent must change approved records' using errcode='42501'; end if;
-  if prior is null and e->>'rewardVersion' is distinct from '3' then raise exception 'Please reopen the updated PAT app before recording work'; end if;
+  if (prior is null or prior->>'rewardVersion'='3') and e->>'rewardVersion' is distinct from '3' then raise exception 'Please reopen the updated PAT app before recording work'; end if;
+  if e->>'bonusWeek' is not null and e->>'bonusWeek' is distinct from e->>'week' then raise exception 'Bonus must belong to its recorded week'; end if;
   if e->>'outcome'='finished' and e->>'status'='approved' then
    if role_name not in ('parent','clinician') then raise exception 'Dad must sign in with his parent account to approve work' using errcode='42501'; end if;
    if e->>'bonusWeek' is not null then
