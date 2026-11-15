@@ -552,4 +552,8 @@ const familySection=$('adult'),familyHeading=familySection.querySelector('h2');f
 $('pat-settings').closest('details').open=false;
 applyPersonalisation();
 
+
+// Update only at a quiet landing/home screen, never during work or recording.
+window.patCanUpdate=()=>!activeActivity&&!activeRecord&&!capture&&!recordingBusy&&!helpRecognition&&!helpSending&&!document.querySelector('dialog[open]')&&(!$('home').hidden||(!$('landing').hidden&&!$('landing-start').disabled));
+const updateOpenPage=openPage;openPage=async function(id){await updateOpenPage(id);if(['home','landing'].includes(id))setTimeout(()=>parent.PAT_CLOUD.checkUpdate?.(),0)};
 </script></body></html>

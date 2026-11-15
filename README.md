@@ -29,3 +29,9 @@ Story Safari is maintained separately in Therapy-Games. Its optional familiar-vo
 PAT was extracted from WhizkidAl/Track-WhizKids at commit 043f82f0ad83ab982c665c4900402a68225093d9 on 14 November 2026. Track remains a separate application and repository. The old PAT address remains available for existing tablet shortcuts during migration. The database, accounts and participant records are unchanged. Check Saved to cloud before replacing a tablet shortcut.
 
 The complete parent guide is available inside Family setup and in `parent-guide.html`. Parents can edit Explore/Make labels, emojis, HTTPS links, visibility and custom choices, plus preset colour themes and card text size. Personalisation does not change reward targets. Team invitation drafts are parent-authored.
+
+## Installed-app updates
+
+The installed app checks for a newer release on resume, online recovery, return to Home and once per minute while visible. It validates released asset hashes before reloading. Updates wait for Home/landing, no active activity, recording or dialog, and confirmed cloud sync; offline or conflicting work is retained. App caches contain public application code only.
+
+Before every publication, run `node scripts/prepare-release.cjs` (or supply a YYYY-MM-DD.number version), run the tests, and commit the generated release manifest with the changed files in one commit. The Track repository keeps only its existing My Base entry-page/worker compatibility route pointing to canonical PAT assets; unrelated Track pages are unchanged.

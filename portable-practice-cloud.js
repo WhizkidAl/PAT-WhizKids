@@ -1,4 +1,6 @@
 'use strict';
+const PAT_BUILD='2026-11-16.3';
+const PAT_ASSET_ROOT=new URL(location.hostname==='whizkidal.github.io'?'/PAT-WhizKids/':'./',location.href);
 const API='https://ifrzwfklznutsxgtkivr.supabase.co',PUBLIC_KEY='sb_publishable_K3_2abeWsga5Uievq-w8EQ_qz2Lrz6A';
 const db=window.supabase.createClient(API,PUBLIC_KEY),el=id=>document.getElementById(id);
 let hub=null,user=null,revision=0,pending=null,blocked=false,busy=false,timer=null,generation=0;
@@ -18,7 +20,7 @@ async function mount(row){
  window.PAT_CLOUD.accessRole=row.access_role;
  const cfg=row.configuration,frameCfg={...cfg};delete frameCfg.inlineAssets;const snapshot=pending?.snapshot||row.snapshot,audio=pending?.audio||row.audio||{};
  window.PAT_CLOUD.initialAudio=audio;window.PAT_CLOUD.initialSnapshot=snapshot;window.PAT_CLOUD.ready=false;
- let template=await fetch('portable-practice-app.html',{cache:'no-cache'}).then(r=>{if(!r.ok)throw Error('The application could not be loaded.');return r.text()});
+ let template=await fetch(new URL('portable-practice-app.html?release='+PAT_BUILD,PAT_ASSET_ROOT),{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('The application could not be loaded.');return r.text()});
  template=template.replace(/pat-private-asset:(a\d+)/g,(_,id)=>cfg.inlineAssets[id]||'');
  template=template.replace('"__PRIVATE_CONFIGURATION__"',()=>scriptJSON(frameCfg));
  const prepare='<script>try{'+(snapshot?'localStorage.setItem('+scriptJSON('pats-hub-v4:'+row.participant_id)+','+scriptJSON(JSON.stringify(snapshot))+');':'')+'}catch{}<\/script>';
@@ -56,4 +58,29 @@ function launchAnimation(kind){const pkg=kind==='octo'?'edu.mit.octostudio':'com
 el('install-octo').onclick=()=>launchAnimation('octo');el('install-motion').onclick=()=>launchAnimation('motion');window.PAT_CLOUD.launchAnimation=launchAnimation;
 window.addEventListener('online',flush);window.addEventListener('beforeunload',e=>{if(pending){e.preventDefault();e.returnValue='Changes are waiting for cloud sync.'}});
 db.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_IN')setTimeout(()=>{if(!user)signedIn(session)},0);if(event==='SIGNED_OUT')setTimeout(()=>signedIn(null),0)});
-(async()=>{const {data,error}=await db.auth.getSession();if(error)el('auth-status').textContent=error.message;await signedIn(data.session);if('serviceWorker'in navigator)navigator.serviceWorker.register('portable-practice-sw.js',{scope:'./'}).catch(()=>{})})().catch(e=>{el('auth-status').textContent=e.message});
+(async()=>{const {data,error}=await db.auth.getSession();if(error)el('auth-status').textContent=error.message;await signedIn(data.session);if('serviceWorker'in navigator)navigator.serviceWorker.register('portable-practice-sw.js',{scope:'./',updateViaCache:'none'}).catch(()=>{})})().catch(e=>{el('auth-status').textContent=e.message});
+
+// Installed apps also check when resumed, rather than waiting for a cold start.
+function updateSafe(){
+ if(!hub||!window.PAT_CLOUD.ready||blocked||busy||el('account').open||!el('conflict').hidden)return false;
+ try{return el('app').contentWindow.patCanUpdate?.()===true}catch{return false}
+}
+async function updateFetch(path){const response=await fetch(new URL(path,PAT_ASSET_ROOT),{cache:'no-store',signal:AbortSignal.timeout(10000)});if(!response.ok)throw Error('Release unavailable');return response;}
+async function verifyRelease(release){
+ const names=['portable-practice-cloud.js','portable-practice-app.html','portable-practice-updates.js'];
+ if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}\.[0-9]+$/.test(release.version))return false;
+ for(const name of names){const expected=release.sha256?.[name];if(!/^[a-f0-9]{64}$/.test(expected||''))return false;const response=await updateFetch(name+'?release='+encodeURIComponent(release.version));const digest=await crypto.subtle.digest('SHA-256',await response.arrayBuffer());if(Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('')!==expected)return false;}return true;
+}
+const appUpdater=window.PATUpdates?.create({version:PAT_BUILD,
+ available:()=>navigator.onLine&&!document.hidden,
+ release:async()=>{const response=await updateFetch('portable-practice-release.json?check='+Date.now());return response.json()},
+ verify:verifyRelease,safe:updateSafe,save:flush,saved:()=>!pending&&!busy&&!blocked,
+ reload:version=>{const url=new URL(location.href);url.searchParams.set('release',version);location.replace(url.href)}
+});
+function checkAppUpdate(){appUpdater?.check();navigator.serviceWorker?.getRegistration?.().then(r=>r?.update()).catch(()=>{});}
+window.PAT_CLOUD.checkUpdate=()=>appUpdater?.check();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkAppUpdate()});
+window.addEventListener('pageshow',checkAppUpdate);window.addEventListener('online',checkAppUpdate);
+navigator.serviceWorker?.addEventListener('controllerchange',()=>appUpdater?.check());
+setInterval(()=>appUpdater?.check(),60000);setTimeout(checkAppUpdate,3000);
+const buildInfo=document.createElement('p');buildInfo.className='small';buildInfo.textContent='My Base '+PAT_BUILD+' · updates automatically when Home is open and work is saved.';el('account').append(buildInfo);
