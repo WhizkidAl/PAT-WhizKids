@@ -52,8 +52,7 @@ begin
    else
     if e->>'workConfirmed' is distinct from 'true' then raise exception 'Parent must confirm the actual work'; end if;
     select value into assignment from jsonb_array_elements(coalesce(new.snapshot->'assignments','[]')) where value->>'id'=e->>'activity';
-    if e->>'activity'='speech' and e->>'storyCompleted' is distinct from 'true' then raise exception 'Confirm one complete Speech story'; end if;
-    if e->>'routine' is null and e->>'activity'<>'speech' and (coalesce((e->>'engagementMinutes')::numeric,0)<=0 or (assignment is null and coalesce((e->>'engagementMinutes')::numeric,0)<10)) then raise exception 'Record actual practice time; standard practice requires at least ten minutes'; end if;
+    if not coalesce(prior->>'status'='approved' and prior->>'workConfirmed'='true' and prior->>'engagementMinutes' is null,false) and e->>'routine' is null and (coalesce((e->>'engagementMinutes')::numeric,0)<=0 or (assignment is null and coalesce((e->>'engagementMinutes')::numeric,0)<10)) then raise exception 'Record actual practice time; standard practice requires at least ten minutes'; end if;
    end if;
   end if;
  end loop;

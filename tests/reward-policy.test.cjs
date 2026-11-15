@@ -8,5 +8,5 @@ s.entries.push(record('n4','nessy','2026-11-14T10:00:00Z'));assert.equal(R.extra
 s.entries.push({...record('bonus1','weekly-bonus','2026-11-15T10:00:00Z'),bonusWeek:k,bonusType:'completion'},{...record('bonus2','extra-bonus','2026-11-15T11:00:00Z'),bonusWeek:k,bonusType:'extra'});assert.equal(s.entries.reduce((n,e)=>n+R.coin(s,e,'2026-11-15'),0),5);
 s.entries.push({...s.entries[0],id:'same-session'});assert.equal(R.coin(s,s.entries.at(-1),'2026-11-15'),0);assert.equal(R.complete(s,'2026-11-16'),false);
 s.targets.ot=1;s.adjustments=[{week:k,activity:'ot',delta:99}];assert.equal(R.complete(s,k),false);
-assert(html.includes("e.activity!=='speech'"));assert(html.includes('one complete story: understand the situation'));
-console.log('PASS actual embedded reward policy: caps, duplicate sessions, both bonuses, extra-after-completion, Sunday gate, rollover, missing tasks and Speech finish point');
+assert(!html.includes("e.activity!=='speech'"));assert(!html.includes('one complete story: understand the situation'));assert(html.includes("const minimum=a?0:10"));
+console.log('PASS actual embedded reward policy: caps, duplicate sessions, both bonuses, extra-after-completion, Sunday gate, rollover, missing tasks and current activity finish criteria');
