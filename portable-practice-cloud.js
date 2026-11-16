@@ -1,5 +1,5 @@
 'use strict';
-const PAT_BUILD='2026-11-16.4';
+const PAT_BUILD='2026-11-16.5';
 const PAT_ASSET_ROOT=new URL(location.hostname==='whizkidal.github.io'?'/PAT-WhizKids/':'./',location.href);
 const API='https://ifrzwfklznutsxgtkivr.supabase.co',PUBLIC_KEY='sb_publishable_K3_2abeWsga5Uievq-w8EQ_qz2Lrz6A';
 const db=window.supabase.createClient(API,PUBLIC_KEY),el=id=>document.getElementById(id);
@@ -21,6 +21,7 @@ async function mount(row){
  const cfg=row.configuration,frameCfg={...cfg};delete frameCfg.inlineAssets;const snapshot=pending?.snapshot||row.snapshot,audio=pending?.audio||row.audio||{};
  window.PAT_CLOUD.initialAudio=audio;window.PAT_CLOUD.initialSnapshot=snapshot;window.PAT_CLOUD.ready=false;
  let template=await fetch(new URL('portable-practice-app.html?release='+PAT_BUILD,PAT_ASSET_ROOT),{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('The application could not be loaded.');return r.text()});
+ template=template.replace('<head>','<head><base href="'+PAT_ASSET_ROOT.href+'">');
  template=template.replace(/pat-private-asset:(a\d+)/g,(_,id)=>cfg.inlineAssets[id]||'');
  template=template.replace('"__PRIVATE_CONFIGURATION__"',()=>scriptJSON(frameCfg));
  const prepare='<script>try{'+(snapshot?'localStorage.setItem('+scriptJSON('pats-hub-v4:'+row.participant_id)+','+scriptJSON(JSON.stringify(snapshot))+');':'')+'}catch{}<\/script>';
