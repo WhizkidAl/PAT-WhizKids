@@ -1,8 +1,8 @@
 {
-  "version": "2026-11-16.3",
+  "version": "2026-11-16.4",
   "sha256": {
-    "portable-practice-cloud.js": "30c637523ebd95b8b1c9847fb6a02f5a4e790a7fa03feedfa2352d3db2e268b9",
-    "portable-practice-app.html": "4d09c5c12496bf9aec6938cd5c6d793edd02d985e7ee0729af601908637313e6",
+    "portable-practice-cloud.js": "d799207fab7cdd5ee55ec75f0604c59ce6ee6b3876dcbde76335437db79aadbd",
+    "portable-practice-app.html": "ea5e158c5ceecf25d74e47f8cb32db9008f2054ab606c3da350f669379fa8072",
     "portable-practice-updates.js": "638d4baee6763321ff70e8aad63706ba30605ff95736a7289ea00edc31bb215d"
   }
 }
