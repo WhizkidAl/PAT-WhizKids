@@ -1,7 +1,7 @@
 {
   "id": "./portable-practice.html",
-  "name": "My Base",
-  "short_name": "My Base",
+  "name": "PAT Base",
+  "short_name": "PAT Base",
   "start_url": "./portable-practice.html",
   "scope": "./",
   "display": "standalone",
