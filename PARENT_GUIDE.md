@@ -116,6 +116,12 @@ To share progress, use This week → choose the week → Download this week’s 
 
 If a link fails, check the URL, signed-in account and parental controls. If a change fails to save, retain the open app, check connectivity and note the exact message. If approval is unavailable, confirm you are signed into the parent account, not the child account. Ask the program contact for help with access or agreed-task changes. Never send passwords, PINs or complete backups in a public issue report.
 
+## All Aboard and the weekly check-in
+
+If Speech shows All Aboard, that game was assigned for this child. The word sets stay in the private workspace. The public game page does not store them. One round is one burst. Stay on the page until the round finishes. A finished round waits under My coins for a parent check. A round that is left early is saved as stopped and does not ask for a coin. Coins still follow the agreed weekly limit. The game does not award a coin by itself.
+
+On the parent account, Family setup includes the weekly check-in: whether practice was done, bursts per day, how clear the child sounded, whether a repair was noticed and which strategy, any problems, and a message to Alex. The tablet account cannot send this. It does not change coin targets. The clinician can read what you save.
+
 ## Parent handover check
 
 - Parent sign-in and Family PIN work on the parent’s device.

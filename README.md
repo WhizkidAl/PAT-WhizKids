@@ -24,6 +24,16 @@ Apply `supabase/help_message.sql` before deploying the updated `pat-help` functi
 
 Story Safari is maintained separately in Therapy-Games. Its optional familiar-voice clips stay in that browser's IndexedDB, with explicit export/import; they are not automatically part of PAT cloud audio.
 
+## Therapy games and the weekly check-in — 17 November 2026
+
+Apply `supabase/family_games_and_checkins.sql` on this PAT project only, after the foundation, hub, tablet, help and reward scripts. Do not apply it to Track. It does not change coin rules. A game round is saved as an ordinary activity entry and follows the existing parent-approval and weekly coin cap.
+
+`pat_assigned_games` stores a catalogue id and the private per-child config. The tablet, a parent and the clinician can read it. Only the clinician can change it. The app launches a game only when its catalogue id is in the built-in allow-list. The first id is `all-aboard`. The page is loaded from Therapy-Games and the child's config is injected in this app after sign-in. Child word lists are not written into the Therapy-Games repository.
+
+`pat_parent_checkins` is one row per child per Monday week: practice done, bursts per day, a four-step clarity scale, whether a repair was noticed and which strategy, problems, and a message to the clinician. A parent can write it only for their own child. A clinician can read it. The tablet cannot.
+
+`supabase/seed_wk_dan_01.sql` is not applied by publication. It creates the placeholder participant `WK-DAN-01` only. It does not create accounts or send invitations. Review the weekly coin target in that file before running it. Run `node tests/games-and-checkins.test.cjs` with the other checks. The role script `tests/games-checkin-rollback.sql` rolls itself back; do not commit it against a live database.
+
 ## Migration from Track
 
 PAT was extracted from WhizkidAl/Track-WhizKids at commit 043f82f0ad83ab982c665c4900402a68225093d9 on 14 November 2026. Track remains a separate application and repository. The old PAT address remains available for existing tablet shortcuts during migration. The database, accounts and participant records are unchanged. Check Saved to cloud before replacing a tablet shortcut.

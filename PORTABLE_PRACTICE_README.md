@@ -74,3 +74,7 @@ Apply supabase/help_and_pin.sql after tablet_access.sql. The pat-help Edge Funct
 Only a parent or clinician with write access can use Family connection to set a salted SHA-256 Family PIN. Tablet saves preserve the server PIN and salt, including retry comparisons. This is a family interface approval control, separate from account authentication and Google Family Link.
 
 The current child interface includes a therapy and school gateway and a reptile welcome theme. Speech tools remain separate, with their own browser recording storage.
+
+## Assigned games and parent check-ins
+
+Apply `supabase/family_games_and_checkins.sql` after the reward policy. It belongs only in this PAT project. `pat_assigned_games` is the child's list of Therapy-Games catalogue ids and private config. `pat_parent_checkins` is the Monday parent check-in. Parents write check-ins for their own child. Clinicians read them. Game results are ordinary activity entries, so the existing approval and coin cap still apply. `supabase/seed_wk_dan_01.sql` is a reviewed manual script for the placeholder code WK-DAN-01. Do not apply it as part of publishing the app, and do not create accounts from it.

@@ -697,4 +697,279 @@ applyPersonalisation();renderHome();
 // Update only at a quiet landing/home screen, never during work or recording.
 window.patCanUpdate=()=>!activeActivity&&!activeRecord&&!capture&&!recordingBusy&&!helpRecognition&&!helpSending&&!document.querySelector('dialog[open]')&&(!$('home').hidden||(!$('landing').hidden&&!$('landing-start').disabled));
 const updateOpenPage=openPage;openPage=async function(id){await updateOpenPage(id);if(['home','landing'].includes(id))setTimeout(()=>parent.PAT_CLOUD.checkUpdate?.(),0)};
+/* Therapy-game host. No participant information. */
+(function(root){
+const catalogue={
+ 'all-aboard':{title:'All Aboard!',path:'speech-language/speech-sounds/all-aboard/index.html'}
+};
+const libraryOrigin='https://whizkidal.github.io';
+function libraryPage(catalogueId){
+ const game=catalogue[catalogueId];
+ if(!game) return '';
+ return libraryOrigin+'/Therapy-Games/'+game.path;
+}
+function whole(value,max){
+ const n=Number(value);
+ if(!Number.isFinite(n)||n<0) return 0;
+ return Math.min(Math.floor(n),max);
+}
+function clip(value,max){return String(value==null?'':value).slice(0,max)}
+function normaliseAssigned(rows){
+ if(!Array.isArray(rows)) return [];
+ const seen=new Set(),out=[];
+ for(const row of rows){
+  if(!row||typeof row!=='object') continue;
+  const catalogueId=String(row.catalogueId||row.catalogue_id||'');
+  if(!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(catalogueId)||seen.has(catalogueId)) continue;
+  const config=row.config;
+  if(!config||typeof config!=='object'||Array.isArray(config)) continue;
+  if(row.enabled===false) continue;
+  seen.add(catalogueId);
+  const known=Object.prototype.hasOwnProperty.call(catalogue,catalogueId);
+  const raw=row.burstsPerDay!=null?row.burstsPerDay:row.bursts_per_day;
+  out.push({catalogueId,title:known?catalogue[catalogueId].title:catalogueId,burstsPerDay:Number.isInteger(raw)?raw:null,config,supported:known});
+ }
+ return out;
+}
+function prepareAllAboardConfig(config,origin){
+ if(!config||typeof config!=='object'||Array.isArray(config)) throw Error('This game has no private settings.');
+ const next=JSON.parse(JSON.stringify(config));
+ next.resultsOrigin=/^https:\/\/[^/]+$/.test(origin||'')?origin:'*';
+ return next;
+}
+function gameDocument(html,config,pageUrl){
+ if(typeof html!=='string'||!html.includes('<head>')||typeof pageUrl!=='string'||pageUrl.includes('?')) throw Error('All Aboard page was not recognised.');
+ const folder=pageUrl.replace(/[^/]*$/,'');
+ const payload=JSON.stringify(config).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
+ const prefix='<head><base href="'+folder+'"><'+'script>window.AllAboardConfig='+payload+';</'+'script>';
+ const next=html.replace('<head>',prefix);
+ if(next.indexOf('window.AllAboardConfig')>next.indexOf('all-aboard.js')) throw Error('Private settings were not placed before the game.');
+ return next;
+}
+function activityOutcome(payload){
+ const reason=payload&&payload.outcome;
+ if(reason==='finished'||reason==='all-trains'||reason==='time') return 'finished';
+ return 'stopped';
+}
+function resultId(payload){
+ const start=clip(payload&&payload.startedAt,40).replace(/[^0-9TZ:.-]/g,'');
+ const end=clip(payload&&payload.endedAt,40).replace(/[^0-9TZ:.-]/g,'');
+ if(!start||!end) throw Error('This round has no time to save.');
+ return 'all-aboard:'+start+':'+end;
+}
+function attemptsOf(payload){
+ if(!Array.isArray(payload.attempts)) return [];
+ return payload.attempts.slice(0,200).map(a=>({intendedText:clip(a&&a.intendedText,40),heardText:clip(a&&a.heardText,40),correct:!!(a&&a.correct)}));
+}
+function wordsOf(payload){
+ if(!Array.isArray(payload.words)) return [];
+ return payload.words.slice(0,80).map(w=>({text:clip(w&&(w.text||w.id),40),correct:whole(w&&w.correct,10000),incorrect:whole(w&&w.incorrect,10000)}));
+}
+function repairsOf(payload){
+ if(!Array.isArray(payload.repairs)) return [];
+ return payload.repairs.slice(0,20).map(r=>({strategyId:clip(r&&r.strategyId,40),strategyLabel:clip(r&&r.strategyLabel,80),strategyKind:clip(r&&r.strategyKind,20),success:!!(r&&r.success),intendedText:clip(r&&r.intendedText,40),heardText:clip(r&&r.heardText,40)}));
+}
+function summarise(payload,outcome){
+ const repairs=repairsOf(payload).map(r=>r.strategyLabel+(r.success?' worked':' did not work')).filter(Boolean);
+ const minutes=Math.round(whole(payload.durationMs,86400000)/60000);
+ return [outcome==='finished'?'Round finished.':'Round stopped.','Level '+clip(payload.level,8)+'.',minutes?minutes+' min.':'',whole(payload.correct,10000)+' correct, '+whole(payload.incorrect,10000)+' incorrect.',repairs.length?'Repair: '+repairs.join('; ')+'.':''].filter(Boolean).join(' ').slice(0,500);
+}
+function mapAllAboardResults(message,context){
+ if(!message||message.source!=='all-aboard'||message.type!=='all-aboard-results'||!message.payload||typeof message.payload!=='object') throw Error('Unrecognised game result');
+ if(!context||!/^\d{4}-\d{2}-\d{2}$/.test(context.week||'')||!/^\d{4}-\d{2}-\d{2}$/.test(context.date||'')) throw Error('Invalid record');
+ const payload=message.payload,outcome=activityOutcome(payload),id=resultId(payload);
+ const attempts=attemptsOf(payload),words=wordsOf(payload),repairs=repairsOf(payload);
+ return {id,sessionKey:id,activity:'all-aboard',discipline:'speech',title:'All Aboard!',week:context.week,date:context.date,time:context.time||payload.endedAt||'',started:context.started||payload.startedAt||'',outcome,status:outcome==='finished'?'pending':'approved',rewardVersion:3,coins:0,feedbackVersion:2,bonusWeek:null,routine:null,bonusType:null,engagementMinutes:null,supportLevel:null,workConfirmed:false,experience:null,feeling:null,problems:null,comment:summarise(payload,outcome),basis:outcome==='finished'?'All Aboard round saved in My Base. A parent checks before a coin.':'All Aboard round saved as stopped. No coin is claimed.',source:'all-aboard',gameResult:{gameId:'all-aboard',catalogueId:'all-aboard',configId:clip(payload.configId,80),level:clip(payload.level,8),durationMs:whole(payload.durationMs,86400000),attemptCount:attempts.length||whole(payload.attemptCount,10000),correct:whole(payload.correct,10000),incorrect:whole(payload.incorrect,10000),attempts,words,repairs}};
+}
+function rememberGameResult(entries,entry){
+ if(!Array.isArray(entries)||!entry||!entry.id) throw Error('Invalid record');
+ if(entries.some(item=>item&&(item.id===entry.id||item.sessionKey===entry.sessionKey))) return entries;
+ return entries.concat(entry);
+}
+root.PATGames={catalogue,libraryOrigin,libraryPage,normaliseAssigned,prepareAllAboardConfig,gameDocument,mapAllAboardResults,rememberGameResult};
+if(typeof module!=='undefined') module.exports=root.PATGames;
+})(typeof window!=='undefined'?window:globalThis);
+/* End therapy-game host. */
+let gameSession=null;
+function assignedGameList(){return (window.PATGames?PATGames.normaliseAssigned(BASE.assignedGames):[])}
+function leaveGame(){gameSession=null;const frame=$('game-frame');if(frame){frame.onload=null;frame.srcdoc=''}const wrap=$('game-frame-wrap');if(wrap)wrap.hidden=true}
+function ensureGameFrame(){
+ if($('game-frame'))return;
+ if(!document.getElementById('game-host-style')){const style=document.createElement('style');style.id='game-host-style';style.textContent='#game-frame{width:100%;height:min(78dvh,900px);border:3px solid #1b2430;border-radius:18px;background:#f4efe6}#game-frame-wrap{margin-top:16px}.pat-checkin label{display:block;margin:12px 0}.pat-checkin-scale{display:flex;flex-wrap:wrap;gap:8px}.pat-checkin-scale label{display:flex;gap:8px;align-items:center;background:#e7e2ed;border-radius:12px;padding:8px 12px}';document.head.append(style)}
+ const wrap=document.createElement('div');wrap.id='game-frame-wrap';wrap.hidden=true;
+ const status=document.createElement('p');status.id='game-frame-status';status.setAttribute('role','status');
+ const frame=document.createElement('iframe');frame.id='game-frame';frame.title='All Aboard!';frame.setAttribute('sandbox','allow-scripts allow-forms allow-modals allow-popups');frame.referrerPolicy='no-referrer';
+ const leave=button('Back to my games',()=>leaveGame(),'secondary');leave.id='game-leave';
+ wrap.append(status,frame,leave);$('speech').append(wrap);
+}
+function renderAssignedGames(){
+ const box=$('speech-tools');if(!box)return;box.replaceChildren();
+ const games=assignedGameList();
+ const note=document.createElement('p');note.textContent=games.length?'Choose a game. The round is saved here for a parent to check.':'No therapy game is assigned yet.';box.append(note);
+ for(const game of games){
+  const sub=game.supported?(game.burstsPerDay==null?'One round':game.burstsPerDay+' bursts a day · one round'):'Not available in this version';
+  box.append(card(null,game.title,sub,'🚂',()=>game.supported?openAssignedGame(game):notify('This game is not available in this version of My Base.')));
+ }
+ if(safe(state.links.speech))box.append(card(null,'Other speech resources','Provider link','folder',()=>startOnlineSpeech()));
+}
+async function showSpeechRoom(){
+ leaveGame();document.body.classList.remove('landing-only');
+ document.querySelectorAll('main>section').forEach(s=>s.hidden=s.id!=='speech');
+ $('top-back').hidden=false;renderAssignedGames();
+ const bar=$('pat-nav');if(bar)bar.hidden=false;const foot=$('pat-footer');if(foot)foot.hidden=false;window.scrollTo(0,0);const heading=$('speech').querySelector('h2');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true})}
+}
+async function openAssignedGame(game){
+ if(!game?.supported)return notify('This game is not available in this version of My Base.');
+ const page=PATGames.libraryPage(game.catalogueId);
+ if(!page||page.includes('?'))return notify('This game is not available in this version of My Base.');
+ ensureGameFrame();
+ const wrap=$('game-frame-wrap'),frame=$('game-frame'),status=$('game-frame-status');
+ wrap.hidden=false;status.textContent='Loading your trains…';frame.srcdoc='';
+ gameSession={catalogueId:game.catalogueId,started:new Date().toISOString()};
+ try{
+  const response=await fetch(page,{cache:'no-store'});
+  if(!response.ok)throw Error('All Aboard could not be loaded. Check the connection.');
+  const html=await response.text();
+  const origin=location.origin&&location.origin!=='null'?location.origin:'*';
+  const config=PATGames.prepareAllAboardConfig(game.config,origin);
+  frame.onload=()=>{
+   if(!frame.srcdoc.includes('AllAboardConfig'))return;
+   try{if(frame.contentWindow.AllAboard&&typeof frame.contentWindow.AllAboard.start==='function')frame.contentWindow.AllAboard.start(config)}catch{}
+   try{frame.contentWindow.postMessage({type:'all-aboard-config',config},'*')}catch{}
+   status.textContent='Your trains are ready. Stay on this page until the round finishes. A parent checks it before a coin.';
+  };
+  frame.srcdoc=PATGames.gameDocument(html,config,page);
+ }catch(error){leaveGame();notify(error.message||'All Aboard could not be loaded.')}
+}
+window.addEventListener('message',event=>{
+ const frame=$('game-frame');
+ if(!frame||event.source!==frame.contentWindow)return;
+ const data=event.data;
+ if(!data||data.source!=='all-aboard'||data.type!=='all-aboard-results'||!gameSession)return;
+ try{
+  const entry=PATGames.mapAllAboardResults(data,{week:monday(),date:day(),time:new Date().toISOString(),started:gameSession.started});
+  const next=PATGames.rememberGameResult(state.entries,entry);
+  if(next===state.entries)return;
+  state.entries=next;persist();renderHome();
+  notify(entry.outcome==='finished'?'Saved. Dad checks this burst before a coin.':'Saved as stopped. No coin is claimed.');
+ }catch(error){notify(error.message)}
+});
+const hostLaunch=launch;
+launch=function(id){
+ if(id==='speech'&&assignedGameList().some(game=>game.supported)){openPage('speech');return}
+ return hostLaunch(id);
+};
+const hostOpen=openPage;
+openPage=async function(id){
+ if(id!=='speech'&&gameSession)leaveGame();
+ if(id==='speech'&&assignedGameList().some(game=>game.supported))return showSpeechRoom();
+ return hostOpen(id);
+};
+if(typeof patRenderPractice==='function'){
+ const hostPractice=patRenderPractice;
+ patRenderPractice=function(){
+  hostPractice();
+  const grid=document.querySelector('#my-practice .pat-grid');if(!grid)return;
+  for(const game of assignedGameList())if(game.supported)grid.append(patDoor(game.title,game.burstsPerDay==null?'Speech game':game.burstsPerDay+' bursts a day','practice',()=>openPage('speech')));
+ }
+}
+const hostCanUpdate=window.patCanUpdate;
+window.patCanUpdate=()=>!gameSession&&hostCanUpdate();
+function checkinField(parentNode,label,control){const wrap=document.createElement('label');wrap.append(document.createTextNode(label),control);parentNode.append(wrap);return control}
+function renderParentCheckIn(){
+ let panel=$('pat-checkin');
+ if(!panel){panel=document.createElement('section');panel.id='pat-checkin';panel.className='panel pat-checkin';$('parent-instructions-open').before(panel)}
+ panel.replaceChildren();
+ const role=parent.PAT_CLOUD?.accessRole||'';
+ const heading=document.createElement('h2');heading.textContent='Weekly check-in';panel.append(heading);
+ const intro=document.createElement('p');
+ if(role==='tablet'){intro.textContent='A parent records the weekly check-in from their own account.';panel.append(intro);return}
+ if(role!=='parent'&&role!=='clinician'){intro.textContent='A parent records this check-in. The clinician can read it.';panel.append(intro);return}
+ intro.textContent=role==='parent'?'This week’s practice, for the clinician. It does not change coins.':'Check-ins recorded by a parent. This account can read them.';
+ panel.append(intro);
+ const games=assignedGameList().filter(game=>game.burstsPerDay!=null);
+ if(games.length){const agreed=document.createElement('p');agreed.textContent='Agreed practice: '+games.map(game=>game.title+' · '+game.burstsPerDay+' bursts a day').join('. ')+'.';panel.append(agreed)}
+ const status=document.createElement('p');status.id='pat-checkin-status';status.setAttribute('role','status');panel.append(status);
+ if(role==='clinician'){
+  parent.PAT_CLOUD.loadCheckIns().then(rows=>{
+   const list=[...rows].sort((a,b)=>String(b.week_start).localeCompare(String(a.week_start)));
+   if(!list.length){status.textContent='No check-in has been saved yet.';return}
+   for(const row of list){
+    const item=document.createElement('article');item.className='panel';
+    const title=document.createElement('h3');title.textContent='Week of '+dateLabel(String(row.week_start).slice(0,10));item.append(title);
+    const body=document.createElement('p');
+    body.textContent='Practice '+(row.practice_done?'done':'not done')+' · '+row.bursts_per_day+' bursts a day · sounds '+row.clarity+' · repair '+(row.repair_noticed?row.repair_strategy||'noticed':'not noticed');
+    item.append(body);
+    if(row.problems){const problems=document.createElement('p');problems.textContent='Problems: '+row.problems;item.append(problems)}
+    if(row.message_to_clinician){const message=document.createElement('p');message.textContent='Message to Alex: '+row.message_to_clinician;item.append(message)}
+    panel.append(item);
+   }
+  }).catch(()=>{status.textContent='Check-ins could not be loaded.'});
+  return;
+ }
+ let week=monday();
+ const weekLine=document.createElement('p');panel.append(weekLine);
+ const done=document.createElement('select');done.append(new Option('Yes', 'yes'), new Option('No', 'no'));
+ checkinField(panel,'Practice done this week',done);
+ const bursts=document.createElement('input');bursts.type='number';bursts.min='0';bursts.max='20';bursts.value='0';
+ checkinField(panel,'Bursts per day',bursts);
+ const scale=document.createElement('div');scale.className='pat-checkin-scale';
+ for(const [value,label] of [['hard','Hard to understand'],['sometimes','Sometimes clear'],['mostly','Mostly clear'],['clear','Clear']]){
+  const choice=document.createElement('label');const input=document.createElement('input');input.type='radio';input.name='pat-clarity';input.value=value;choice.append(input,document.createTextNode(label));scale.append(choice);
+ }
+ checkinField(panel,'How clear does the child sound?',scale);
+ const noticed=document.createElement('select');noticed.append(new Option('No','no'), new Option('Yes','yes'));
+ checkinField(panel,'Did they notice a repair?',noticed);
+ const strategy=document.createElement('select');
+ for(const value of ['','Say the key word','Show or point','Tell it another way','Not sure'])strategy.append(new Option(value||'Choose…',value));
+ checkinField(panel,'Which repair strategy?',strategy);
+ const problems=document.createElement('textarea');problems.maxLength=1000;problems.rows=3;
+ checkinField(panel,'Any problems?',problems);
+ const message=document.createElement('textarea');message.maxLength=1000;message.rows=3;
+ checkinField(panel,'Message to Alex',message);
+ const save=button('Save this week’s check-in',async()=>{
+  save.disabled=true;status.textContent='Saving the check-in…';
+  try{
+   if(!parent.PAT_CLOUD?.saveCheckIn)throw Error('The weekly check-in is not ready on the server yet. Nothing was saved.');
+   const clarity=scale.querySelector('input:checked')?.value||'';
+   await parent.PAT_CLOUD.saveCheckIn({weekStart:week,practiceDone:done.value==='yes',burstsPerDay:Number(bursts.value),clarity,repairNoticed:noticed.value==='yes',repairStrategy:strategy.value,problems:problems.value,message:message.value});
+   status.textContent='Check-in saved. The clinician can read it.';
+  }catch(error){status.textContent=error.message||'The weekly check-in could not be saved.'}
+  finally{save.disabled=false}
+ });
+ panel.append(save);
+ const earlier=button('Earlier week',()=>{week=addDays(week,-7);fill()},'secondary');
+ const current=button('This week',()=>{week=monday();fill()},'secondary');
+ panel.append(earlier,current);
+ function fill(){
+  weekLine.textContent='Week of '+dateLabel(week);
+  parent.PAT_CLOUD.loadCheckIns().then(rows=>{
+   const row=(rows||[]).find(item=>String(item.week_start).slice(0,10)===week);
+   done.value=row?row.practice_done?'yes':'no':'yes';
+   bursts.value=row?row.bursts_per_day:0;
+   scale.querySelectorAll('input').forEach(input=>{input.checked=row?input.value===row.clarity:false});
+   noticed.value=row&&row.repair_noticed?'yes':'no';
+   strategy.value=row?.repair_strategy||'';
+   problems.value=row?.problems||'';
+   message.value=row?.message_to_clinician||'';
+  }).catch(()=>{status.textContent='Saved check-ins could not be loaded. You can still write this week.'});
+ }
+ fill();
+}
+function renderAssignedGameSettings(){
+ let panel=$('pat-assigned-games');
+ if(!panel){panel=document.createElement('section');panel.id='pat-assigned-games';panel.className='panel';$('parent-instructions-open').before(panel)}
+ panel.replaceChildren();
+ const heading=document.createElement('h2');heading.textContent='Assigned therapy games';panel.append(heading);
+ const note=document.createElement('p');note.textContent='Each game is listed by its catalogue id. The private word sets stay in this workspace. They are not stored in the Therapy Games library. The clinician changes an assignment; this screen does not.';panel.append(note);
+ const games=assignedGameList();
+ if(!games.length){const empty=document.createElement('p');empty.textContent='No therapy game is assigned yet.';panel.append(empty);return}
+ for(const game of games){
+  const item=document.createElement('p');
+  item.textContent=game.title+' · catalogue id '+game.catalogueId+(game.burstsPerDay==null?'':' · '+game.burstsPerDay+' bursts a day')+(game.supported?'':' · not available in this version');
+  panel.append(item);
+ }
+}
+const hostAdult=renderAdult;
+renderAdult=function(){hostAdult();renderAssignedGameSettings();renderParentCheckIn()};
 </script></body></html>
