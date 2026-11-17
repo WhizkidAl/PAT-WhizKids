@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "node tests/portable-practice.test.cjs && node tests/reward-policy.test.cjs && node tests/installability.test.cjs && node --test tests/help-handler.test.mjs && node tests/auto-updates.test.cjs",
+    "test": "node tests/portable-practice.test.cjs && node tests/reward-policy.test.cjs && node tests/installability.test.cjs && node --test tests/help-handler.test.mjs && node tests/auto-updates.test.cjs && node tests/games-and-checkins.test.cjs",
     "prepare-release": "node scripts/prepare-release.cjs"
   },
   "devDependencies": {

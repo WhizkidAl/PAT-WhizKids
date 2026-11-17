@@ -1,5 +1,5 @@
 'use strict';
-const PAT_BUILD='2026-11-16.6';
+const PAT_BUILD='2026-11-17.1';
 const PAT_ASSET_ROOT=new URL(location.hostname==='whizkidal.github.io'?'/PAT-WhizKids/':'./',location.href);
 const API='https://ifrzwfklznutsxgtkivr.supabase.co',PUBLIC_KEY='sb_publishable_K3_2abeWsga5Uievq-w8EQ_qz2Lrz6A';
 const db=window.supabase.createClient(API,PUBLIC_KEY),el=id=>document.getElementById(id);
@@ -11,14 +11,40 @@ function download(data,name){const a=document.createElement('a');a.href=URL.crea
 async function queue(participantId,snapshot,audio){if(!hub||participantId!==hub.participant_id||!window.PAT_CLOUD.ready)return;if(!pending&&JSON.stringify(snapshot)===JSON.stringify(hub.snapshot)&&JSON.stringify(audio)===JSON.stringify(hub.audio)){status('Saved to cloud');return;}const copy={snapshot:JSON.parse(JSON.stringify(snapshot)),audio:JSON.parse(JSON.stringify(audio)),baseRevision:revision,at:new Date().toISOString()};pending=copy;generation++;try{await journal('set','pending:'+hub.participant_id,copy);status(navigator.onLine?'Saved here · saving to cloud…':'Saved here · waiting for connection')}catch(e){status('Cloud copy pending · keep this browser open and make a Full backup')}clearTimeout(timer);timer=setTimeout(flush,900)}
 async function flush(){if(!hub||!pending||blocked||busy)return;busy=true;const outgoing=pending,version=generation;
 try{status('Saving to cloud…');const {data,error}=await db.rpc('pat_save_snapshot',{p_participant_id:hub.participant_id,p_expected_revision:revision,p_snapshot:outgoing.snapshot,p_audio:outgoing.audio});if(error)throw error;if(data.conflict){blocked=true;el('conflict').hidden=false;status('Newer cloud version · local copy kept');return}revision=data.revision;if(version===generation){pending=null;await journal('delete','pending:'+hub.participant_id);hub.snapshot=outgoing.snapshot;hub.audio=outgoing.audio;hub.revision=revision;await journal('set','last:'+user.id,hub);status('Saved to cloud · '+new Date(data.saved_at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}))}else{pending.baseRevision=revision;await journal('set','pending:'+hub.participant_id,pending)}}catch(e){status('Saved here · cloud unavailable: '+e.message)}finally{busy=false;if(pending&&!blocked&&generation!==version)setTimeout(flush,1000)}}
+async function optionalRows(build){
+ try{
+  const query=build();
+  if(!query||typeof query.then!=='function')return [];
+  const {data,error}=await query;
+  if(error||!Array.isArray(data))return [];
+  return data;
+ }catch{return []}
+}
 window.PAT_CLOUD={queue,initialAudio:{},initialSnapshot:null,ready:false};
+window.PAT_CLOUD.loadCheckIns=async()=>{
+ if(!hub)return [];
+ return optionalRows(()=>db.from('pat_parent_checkins').select('week_start,practice_done,bursts_per_day,clarity,repair_noticed,repair_strategy,problems,message_to_clinician,updated_at').eq('participant_id',hub.participant_id));
+};
+window.PAT_CLOUD.saveCheckIn=async input=>{
+ if(!hub||!user)throw Error('Sign in to PAT Base first.');
+ if(hub.access_role!=='parent')throw Error('A parent account records the weekly check-in.');
+ const strategy=input.repairNoticed?String(input.repairStrategy||''):'';
+ const strategies=['Say the key word','Show or point','Tell it another way','Not sure'];
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(input.weekStart||''))throw Error('Choose a Monday week.');
+ if(!Number.isInteger(input.burstsPerDay)||input.burstsPerDay<0||input.burstsPerDay>20)throw Error('Enter bursts per day from 0 to 20.');
+ if(!['hard','sometimes','mostly','clear'].includes(input.clarity))throw Error('Choose how clear the child sounded.');
+ if(input.repairNoticed&&!strategies.includes(strategy))throw Error('Choose the repair strategy.');
+ const row={participant_id:hub.participant_id,week_start:input.weekStart,practice_done:input.practiceDone===true,bursts_per_day:input.burstsPerDay,clarity:input.clarity,repair_noticed:input.repairNoticed===true,repair_strategy:strategy,problems:String(input.problems||'').slice(0,1000),message_to_clinician:String(input.message||'').slice(0,1000)};
+ const {error}=await db.from('pat_parent_checkins').upsert(row,{onConflict:'participant_id,week_start'});
+ if(error)throw Error('The weekly check-in is not ready on the server yet. Nothing was saved.');
+};
 window.PAT_CLOUD.requestHelp=async(kind,activity,requestId,message='')=>{if(!hub||!user)throw Error('Sign in to PAT Base first.');if(!navigator.onLine)throw Error('Offline: email was not sent. Ask your adult in person.');const {data,error}=await db.functions.invoke('pat-help',{body:{participantId:hub.participant_id,requestId,kind,activity,message}});if(error){let message='Email could not be sent. Ask your adult in person.';try{message=(await error.context.json()).message||message}catch{}throw Error(message)}if(!data?.sent)throw Error(data?.message||'Email could not be confirmed.');return data};
 function scriptJSON(value){return JSON.stringify(value).replace(/</g,'\\u003c')}
 async function mount(row){
  window.PAT_CLOUD.ready=false;el('app').srcdoc='';el('app').hidden=true;hub=row;revision=row.revision;blocked=false;el('conflict').hidden=true;pending=await journal('get','pending:'+row.participant_id).catch(()=>null);
  if(pending&&pending.baseRevision!==revision){blocked=true;el('conflict').hidden=false;status('Newer cloud version · local copy kept');el('connection').hidden=false;return}
  window.PAT_CLOUD.accessRole=row.access_role;
- const cfg=row.configuration,frameCfg={...cfg};delete frameCfg.inlineAssets;const snapshot=pending?.snapshot||row.snapshot,audio=pending?.audio||row.audio||{};
+ const cfg=row.configuration,frameCfg={...cfg,assignedGames:Array.isArray(row.assignedGames)?row.assignedGames:[]};delete frameCfg.inlineAssets;const snapshot=pending?.snapshot||row.snapshot,audio=pending?.audio||row.audio||{};
  window.PAT_CLOUD.initialAudio=audio;window.PAT_CLOUD.initialSnapshot=snapshot;window.PAT_CLOUD.ready=false;
  let template=await fetch(new URL('portable-practice-app.html?release='+PAT_BUILD,PAT_ASSET_ROOT),{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('The application could not be loaded.');return r.text()});
  template=template.replace('<head>','<head><base href="'+PAT_ASSET_ROOT.href+'">');
@@ -32,7 +58,7 @@ async function mount(row){
  el('account-open').textContent=row.access_role==='tablet'?'Device connection':'Family connection';
  await journal('set','last:'+user.id,row).catch(()=>{});status(pending?'Saved here · waiting to sync':'Cloud connected');
 }
-async function loadHub(pid){if(hub&&hub.participant_id!==pid&&pending){await flush();if(pending)throw Error('Sync or download the current workspace before switching.')}status('Loading private workspace…');const {data,error}=await db.from('pat_hubs').select('participant_id,configuration,snapshot,audio,revision').eq('participant_id',pid).single();if(error)throw error;const access=await db.from('participant_access').select('access_role').eq('participant_id',pid).eq('user_id',user.id).single();if(access.error)throw access.error;await mount({...data,access_role:access.data.access_role})}
+async function loadHub(pid){if(hub&&hub.participant_id!==pid&&pending){await flush();if(pending)throw Error('Sync or download the current workspace before switching.')}status('Loading private workspace…');const {data,error}=await db.from('pat_hubs').select('participant_id,configuration,snapshot,audio,revision').eq('participant_id',pid).single();if(error)throw error;const access=await db.from('participant_access').select('access_role').eq('participant_id',pid).eq('user_id',user.id).single();if(access.error)throw access.error;const assignedGames=await optionalRows(()=>db.from('pat_assigned_games').select('catalogue_id,enabled,bursts_per_day,config').eq('participant_id',pid).eq('enabled',true));await mount({...data,access_role:access.data.access_role,assignedGames})}
 async function participants(){
  el('choose-wrap').hidden=true;el('switch').hidden=true;
  const {data,error}=await db.from('pat_hubs').select('participant_id,participants(display_name)').order('updated_at',{ascending:false});if(error)throw error;
