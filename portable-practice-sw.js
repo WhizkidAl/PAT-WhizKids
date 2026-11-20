@@ -1,4 +1,4 @@
-const CACHE='pats-auto-shell-2026-11-21.1';
+const CACHE='pats-auto-shell-2026-11-21.2';
 const FILES=['pat-welcome.html','assets/manrope.ttf','parent-guide.html','portable-practice.html','portable-practice-cloud.js','portable-practice-app.html','portable-practice-updates.js','portable-practice.webmanifest','icons/my-base-snake-192.png','icons/my-base-snake-512.png','icons/my-base-snake-maskable-512.png'];
 const LOCAL_ROOT=new URL('./',self.location.href);
 const APP_ROOT=new URL(self.location.hostname==='whizkidal.github.io'?'/PAT-WhizKids/':'./',self.location.href);

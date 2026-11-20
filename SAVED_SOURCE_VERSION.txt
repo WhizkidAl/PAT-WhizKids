@@ -1,0 +1,1 @@
+PAT Base release 2026-11-21.2. Shared public application code and generic resources only. Private participant configuration, avatars, manuals and records remain in PAT Supabase. B styling and parent-managed minute plans are included.
