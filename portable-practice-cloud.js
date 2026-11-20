@@ -1,5 +1,5 @@
 'use strict';
-const PAT_BUILD='2026-11-16.6';
+const PAT_BUILD='2026-11-21.1';
 const PAT_ASSET_ROOT=new URL(location.hostname==='whizkidal.github.io'?'/PAT-WhizKids/':'./',location.href);
 const API='https://ifrzwfklznutsxgtkivr.supabase.co',PUBLIC_KEY='sb_publishable_K3_2abeWsga5Uievq-w8EQ_qz2Lrz6A';
 const db=window.supabase.createClient(API,PUBLIC_KEY),el=id=>document.getElementById(id);

@@ -1,8 +1,8 @@
 # PAT @ Whiz Kids
 
-Portable Access to Therapy: the shared My Base application for authorised families and therapy teams.
+Portable Access to Therapy: the shared PAT Base application for authorised families and therapy teams.
 
-[Open My Base](https://whizkidal.github.io/PAT-WhizKids/portable-practice.html)
+[Open PAT Base](https://whizkidal.github.io/PAT-WhizKids/portable-practice.html)
 
 ## Repository boundary
 
@@ -14,11 +14,11 @@ The same application supports each participant's private configuration and the g
 
 See [the setup guide](PORTABLE_PRACTICE_README.md). Run npm ci followed by npm test. Publish the main branch root with GitHub Pages. Add the published page to the PAT project's authentication redirect allowlist before moving sign-in links.
 
-## Reward policy and help messages — 15 November 2026
+## Parent practice plans — November 2026
 
-Apply `supabase/reward_policy.sql` after the existing foundation, hub, tablet and PIN schemas. The shared client caps ordinary practice coins at agreed weekly targets, has one completion bonus and one additional-work bonus from Sunday, and requires authenticated parent/clinician approval. The database guard protects clinician-owned targets and assignments, rejects child-account approvals, repeated sessions, invalid coin values and over-cap awards. A Family PIN is an additional interface check, not the server authentication boundary. Ordinary practice, including Speech, follows the current activity instructions and usually 10–15 minutes; approval requires at least ten observed engaged minutes. New clinician-assigned tasks use their explicit finish criteria. Routines remain separate.
+Apply `supabase/reward_policy.sql`, then `supabase/reward_plan_v4.sql`. The latter permits authenticated parents and clinicians to manage tasks and future practice plans. The child account can record work but cannot edit allowances or approve rewards. Each full 15 minutes of parent-confirmed practice earns one coin up to a shared weekly allowance. The completion bonus needs the planned number of sessions and allowance; a separate later session enables the extra-work bonus. Both bonuses unlock from Sunday and need parent approval. Existing records keep their previous rules; a week containing records cannot have its saved targets or plan rewritten. A new minute plan requires explicit parent activation in Family setup.
 
-Run `node tests/reward-policy.test.cjs` as well as the existing cloud, install and help-handler checks. Do not test by leaving fictional activity records in a participant workspace. Legacy earned coins remain intact.
+Run `tests/minute-plan.test.cjs` alongside the legacy reward, cloud, install, Help and updater tests. Test database permissions in a rolled-back transaction; do not retain fictional participant records.
 
 Apply `supabase/help_message.sql` before deploying the updated `pat-help` function. The optional message is at most 500 characters, is bound to the request identity for retries, and is sent only to the server-configured parent. No raw dictation audio is emailed. The function validates the bearer token itself, as before. Browser dictation support varies and may use a remote browser speech service; keyboard dictation and typing remain alternatives.
 
@@ -28,10 +28,19 @@ Story Safari is maintained separately in Therapy-Games. Its optional familiar-vo
 
 PAT was extracted from WhizkidAl/Track-WhizKids at commit 043f82f0ad83ab982c665c4900402a68225093d9 on 14 November 2026. Track remains a separate application and repository. The old PAT address remains available for existing tablet shortcuts during migration. The database, accounts and participant records are unchanged. Check Saved to cloud before replacing a tablet shortcut.
 
-The complete parent guide is available inside Family setup and in `parent-guide.html`. Parents can edit Explore/Make labels, emojis, HTTPS links, visibility and custom choices, plus preset colour themes and card text size. Personalisation does not change reward targets. Team invitation drafts are parent-authored.
+The complete parent guide is available inside Family setup and in `parent-guide.html`. Parents can edit Explore/Make labels, emojis, HTTPS links, visibility and custom choices, plus preset colour themes and card text size. Practice plans are managed separately in the parent-only Weekly practice plan panel. Team invitation drafts are parent-authored.
 
 ## Installed-app updates
 
 The installed app checks for a newer release on resume, online recovery, return to Home and once per minute while visible. It validates released asset hashes before reloading. Updates wait for Home/landing, no active activity, recording or dialog, and confirmed cloud sync; offline or conflicting work is retained. App caches contain public application code only.
 
-Before every publication, run `node scripts/prepare-release.cjs` (or supply a YYYY-MM-DD.number version), run the tests, and commit the generated release manifest with the changed files in one commit. The Track repository keeps only its existing My Base entry-page/worker compatibility route pointing to canonical PAT assets; unrelated Track pages are unchanged.
+Before every publication, run `node scripts/prepare-release.cjs` (or supply a YYYY-MM-DD.number version), run the tests, and commit the generated release manifest with the changed files in one commit. The Track repository keeps only its existing PAT Base entry-page/worker compatibility route pointing to canonical PAT assets; unrelated Track pages are unchanged.
+
+## Family and provider resources
+
+- `pat-welcome.html`: concise paper device note.
+- `parent-guide.html`: sectioned family guide, including updating at home/school and Teams/Meet/Zoom preparation.
+- `provider-pack.html` and `provider-invitation.txt`: reusable parent-sent onboarding, calendar format, hosted resources and coin integration.
+- `clinician-guide.html`: generic setup and handover guide, linked in clinician Family setup.
+
+B styling is the default for this release, with four alternative palettes. Main navigation and Whiz Kids identity stay fixed; parents can replace resource links, labels, activity icons and the in-app start character. Device shortcut artwork remains shared.

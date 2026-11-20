@@ -1,0 +1,21 @@
+Subject: Please add your resources and appointments to our PAT setup
+
+Hi [name],
+
+We’re using PAT (Portable Access to Therapy) to bring [child’s name]’s practice, routines and appointments together on their tablet. Please add your part to this setup.
+
+Please send me one link to the resources you maintain, with the starting task, what to do, what finished looks like, suggested minutes/sessions and a review date. Your usual portal, subscription or shared folder is fine. I’ll add it to PAT Base and set the agreed practice plan.
+
+Keep sending appointments to me at [parent email]. Also add [child’s Google email] as an attendee on the calendar invitation, including changes and cancellations. Please use:
+💼 [Service] — [provider]: in person; add the address.
+☁️ [Service] — [provider]: telehealth; put “Join appointment: [direct link]” first in the description, with any meeting ID/passcode underneath.
+🔔 [Activity] — practice reminder: use only for practice prompts, not booked appointments.
+Include the date, start/end time and timezone. Please don’t send only an image of the booking or link.
+
+The quick provider pack explains resource links and coins:
+https://whizkidal.github.io/PAT-WhizKids/provider-pack.html
+
+Please reply to me with the link and details. For questions about PAT itself: Alexandra Cullen, Whiz Kids — alexandra@whizkidstherapy.com.
+
+Thanks,
+[Parent name]
